@@ -121,10 +121,43 @@ call перевод_на_следующий_курс();
 delimiter //
 create procedure баллы_или_оценка (C varchar(6), subj varchar(50) character set UTF8)
 begin
-	if (C='оценка')
-		
+	if (C='оценка') then
+		select student_id, lastname, mark as оценка from students natural join exam natural join subjects where subject_name=subj;
+	else if (C='баллы') then
+		select student_id, lastname, mark*20 as баллы from students natural join exam natural join subjects where subject_name=subj;
+	end if;
+    end if;
 end //
 delimiter ;
+drop procedure баллы_или_оценка;
+call баллы_или_оценка('баллы', 'математика');
+call баллы_или_оценка('оценка', 'математика');
+
+#10. Написать процедуру, которая создает новую таблицу 
+# Результаты сессии: (Номер_зачетки, Фамилия_студента, Номер_группы, количество экзаменов, количество оценок 5, 4, 3 и задолженностей (не сданных и не сдававшихся экзаменов)); 
+# и таблицу Стипендиальная ведомость: (Номер_зачетки, Фамилия_студента, Номер_группы, стипендия). 
+# Стипендия начисляется из условия: одна 5, остальные – 4 – 1500 руб., все 5 – 2000 руб. Использовать курсор.
+create procedure результаты_экзаменов_и_стипендиальная_ведомость()
+begin
+	create table exam_results (
+		student_id varchar(6),
+        lastname varchar(20),
+        group_num varchar(2),
+        count_exams int,
+        count_mark_3 int,
+        count_mark_4 int,
+        count_mark_5 int,
+        count_debt int
+    );
+    create table stipends (
+		student_id varchar(6),
+        lastname varchar(20),
+        group_num varchar(2),
+        stipend int
+    );
+end //
+delimiter ;
+
 
 # 11. Создать процедуру, которая изменяет регистр фамилий студентов на верхний. Использовать курсоры.
 delimiter //
