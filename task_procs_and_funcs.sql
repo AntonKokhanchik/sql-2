@@ -137,27 +137,46 @@ call баллы_или_оценка('оценка', 'математика');
 # Результаты сессии: (Номер_зачетки, Фамилия_студента, Номер_группы, количество экзаменов, количество оценок 5, 4, 3 и задолженностей (не сданных и не сдававшихся экзаменов)); 
 # и таблицу Стипендиальная ведомость: (Номер_зачетки, Фамилия_студента, Номер_группы, стипендия). 
 # Стипендия начисляется из условия: одна 5, остальные – 4 – 1500 руб., все 5 – 2000 руб. Использовать курсор.
+delimiter //
 create procedure результаты_экзаменов_и_стипендиальная_ведомость()
 begin
+	drop table if exists exam_results;
+    drop table if exists stipends;
 	create table exam_results (
-		student_id varchar(6),
-        lastname varchar(20),
-        group_num varchar(2),
+		stud_id varchar(6) PRIMARY KEY,
+        stud_name varchar(20),
+        group_n varchar(2),
         count_exams int,
         count_mark_3 int,
         count_mark_4 int,
         count_mark_5 int,
-        count_debt int
-    );
+        count_debt int 
+	)CHARACTER SET = UTF8;
     create table stipends (
-		student_id varchar(6),
+		student_id varchar(6) PRIMARY KEY,
         lastname varchar(20),
         group_num varchar(2),
-        stipend int
-    );
+        stipend int 
+	)CHARACTER SET = UTF8;
+        
+    declare done int default 0;
+    declare s varchar(6);
+    declare l varchar(20);
+    declare g varchar(2);
+    declare count_exams, count_mark_3, count_mark_4, count_mark_5, count_debt, stipend int;
+	declare i_stud cursor for 
+		select student_id, lastname, group_num, count(mark), sum(mark=3), sum(mark=4), sum(mark=5), sum(mark=2 or mark=NULL) from students natural join exam group by student_id;
+	declare continue handler for sqlstate '02000' set done=1;
+    open i_stud;
+    fetch i_stud into s, l, g, c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt; 
+    repeat
+		insert into table exam_results values s, l, g, c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt;        
+        fetch i_stud into s, l, g, c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt; 
+    until done
+    end repeat;
 end //
 delimiter ;
-
+drop procedure результаты_экзаменов_и_стипендиальная_ведомость;
 
 # 11. Создать процедуру, которая изменяет регистр фамилий студентов на верхний. Использовать курсоры.
 delimiter //
