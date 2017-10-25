@@ -140,43 +140,53 @@ call баллы_или_оценка('оценка', 'математика');
 delimiter //
 create procedure результаты_экзаменов_и_стипендиальная_ведомость()
 begin
-	drop table if exists exam_results;
-    drop table if exists stipends;
-	create table exam_results (
-		stud_id varchar(6) PRIMARY KEY,
-        stud_name varchar(20),
-        group_n varchar(2),
-        count_exams int,
-        count_mark_3 int,
-        count_mark_4 int,
-        count_mark_5 int,
-        count_debt int 
-	)CHARACTER SET = UTF8;
-    create table stipends (
-		student_id varchar(6) PRIMARY KEY,
-        lastname varchar(20),
-        group_num varchar(2),
-        stipend int 
-	)CHARACTER SET = UTF8;
-        
-    declare done int default 0;
-    declare s varchar(6);
-    declare l varchar(20);
-    declare g varchar(2);
-    declare count_exams, count_mark_3, count_mark_4, count_mark_5, count_debt, stipend int;
-	declare i_stud cursor for 
-		select student_id, lastname, group_num, count(mark), sum(mark=3), sum(mark=4), sum(mark=5), sum(mark=2 or mark=NULL) from students natural join exam group by student_id;
-	declare continue handler for sqlstate '02000' set done=1;
-    open i_stud;
-    fetch i_stud into s, l, g, c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt; 
-    repeat
-		insert into table exam_results values s, l, g, c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt;        
-        fetch i_stud into s, l, g, c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt; 
-    until done
-    end repeat;
+	begin
+		drop table if exists exam_results;
+		drop table if exists stipends;
+		create table exam_results (
+			stud_id varchar(6) PRIMARY KEY,
+			stud_name varchar(20),
+			group_n varchar(2),
+			count_exams int,
+			count_mark_3 int,
+			count_mark_4 int,
+			count_mark_5 int,
+			count_debt int 
+		)CHARACTER SET = UTF8;
+		create table stipends (
+			student_id varchar(6) PRIMARY KEY,
+			lastname varchar(20),
+			group_num varchar(2),
+			stipend int 
+		)CHARACTER SET = UTF8;    
+	end;
+    begin
+		declare done int default 0;
+		declare s varchar(6);
+		declare l varchar(20);
+		declare g varchar(2);
+		declare c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt int;
+		declare i cursor for 
+			select student_id, lastname, group_num, count(mark), sum(mark=3), sum(mark=4), sum(mark=5), count(mark)-sum(mark=3)-sum(mark=4)-sum(mark=5) from students natural join exam group by student_id;
+		declare continue handler for sqlstate '02000' set done=1;
+		open i;
+		fetch i into s, l, g, c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt; 
+		repeat
+			insert into exam_results values (s, l, g, c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt);
+            if(c_mark_5 = c_exams) then
+				insert into stipends values(s, l, g, 2000);
+			else if (c_mark_5 = 1 and c_mark_4 = c_exams-1) then
+				insert into stipends values(s, l, g, 1500);
+            end if;
+            end if;
+			fetch i into s, l, g, c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt; 
+		until done
+		end repeat;
+	end;
 end //
 delimiter ;
 drop procedure результаты_экзаменов_и_стипендиальная_ведомость;
+call результаты_экзаменов_и_стипендиальная_ведомость;
 
 # 11. Создать процедуру, которая изменяет регистр фамилий студентов на верхний. Использовать курсоры.
 delimiter //
