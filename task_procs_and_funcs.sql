@@ -8,7 +8,7 @@ drop procedure Ведомость_математика;
 # 2. Создать процедуру с параметрами для изменения оценки заданного студента по заданной дисциплине после пересдачи экзамена.
 create procedure Пересдача(student varchar(6), subj varchar(50) character set UTF8, new_mark varchar(4))
 	update exam set mark = new_mark where student_id = student and subject_id in 
-		(select subject_id from sub0jects where subject_name = subj);
+		(select subject_id from subjects where subject_name = subj);
         
 call Пересдача (130056, 'математика', 4);
 drop procedure Пересдача;
@@ -119,13 +119,13 @@ call перевод_на_следующий_курс();
 
 # 9. Создать процедуру, которая выводит либо оценки студентов по заданной дисциплине, либо баллы в зависимости от значения входного параметра С. Использовать условный оператор.
 delimiter //
-create procedure баллы_или_оценка (C varchar(6), subj varchar(50) character set UTF8)
+create procedure баллы_или_оценка (C varchar(6) character set UTF8, subj varchar(50) character set UTF8)
 begin
 	if (C='оценка') then
 		select student_id, lastname, mark as оценка from students natural join exam natural join subjects where subject_name=subj;
 	else if (C='баллы') then
 		select student_id, lastname, mark*20 as баллы from students natural join exam natural join subjects where subject_name=subj;
-	end if;
+		 end if;
     end if;
 end //
 delimiter ;
@@ -162,9 +162,9 @@ begin
 	end;
     begin
 		declare done int default 0;
-		declare s varchar(6);
-		declare l varchar(20);
-		declare g varchar(2);
+		declare s varchar(6) CHARACTER SET UTF8;
+		declare l varchar(20) CHARACTER SET UTF8;
+		declare g varchar(2) CHARACTER SET UTF8;
 		declare c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt int;
 		declare i cursor for 
 			select student_id, lastname, group_num, count(mark), sum(mark=3), sum(mark=4), sum(mark=5), count(mark)-sum(mark=3)-sum(mark=4)-sum(mark=5) from students natural join exam group by student_id;
@@ -177,7 +177,7 @@ begin
 				insert into stipends values(s, l, g, 2000);
 			else if (c_mark_5 = 1 and c_mark_4 = c_exams-1) then
 				insert into stipends values(s, l, g, 1500);
-            end if;
+				 end if;
             end if;
 			fetch i into s, l, g, c_exams, c_mark_3, c_mark_4, c_mark_5, c_debt; 
 		until done
