@@ -1,4 +1,8 @@
 # TODO: 7, 10
+# в 7 непонятно, как реализовать использование двух триггеров (пересоздать, или пользоваться двумя , аписанными ранее в 5 и 6), и какое поле надо обновлять
+# в 10 непонятно, что за поле атрибут, + неясно, что должно отображаться в полях "старое значение", "новое значение": как сделано, или только одно измененое поле?
+#
+#
 
 # 1. Создайте триггер Before Insert для таблицы Предмет, который при вставке записи о предмете проверяет, входит ли предмет в допустимое множество, и если не входит, задает значение поля предмет равным Null.
 drop table if exists valid_subjects;
@@ -163,27 +167,57 @@ insert into stipends values
 # 10. Создать триггеры, осуществляющие аудит операций обновления для всех таблиц. 
 #	  Данные об операциях записываются в таблицу Аудит с примерным набором атрибутов: (дата, операция, атрибут, старое значение, новое значение).
 drop table audit;
-create table audit (
-	date_operation datetime,
-    name_operation varchar(20),
-    attribute varchar(20),
-    old_data text,
-    new_data text
-)CHARACTER SET = UTF8;   
 drop trigger stipend_update;
 drop trigger exam_update;
 drop trigger students_update;
 drop trigger subjects_update;
+
+create table audit (
+	date_operation datetime,
+    name_operation varchar(20),
+    old_data text,
+    new_data text
+)CHARACTER SET = UTF8;   
 
 delimiter //
 create definer = current_user trigger stipend_update before update on stipends
 for each row
 begin
 	insert into audit value
-    (now(), 'Update_row', table_name, concat(old.student_id, ', ', old.lastname, ', ', old.group_num, ', ', old.stipend), concat(new.student_id, ', ', new.lastname, ', ', new.group_num, ', ', new.stipend));
+    (now(), 'Update_row', concat(old.student_id, ', ', old.lastname, ', ', old.group_num, ', ', old.stipend), concat(new.student_id, ', ', new.lastname, ', ', new.group_num, ', ', new.stipend));
 end //
 delimiter ;
-
 update stipends set stipend = 8500 where student_id = '110246';
+
+delimiter //
+create definer = current_user trigger exam_update before update on exam
+for each row
+begin
+	insert into audit value
+    (now(), 'Update_row', concat(old.student_id, ', ', old.subject_id, ', ', old.mark), concat(new.student_id, ', ', new.subject_id, ', ', new.mark));
+end //
+delimiter ;
+update exam set mark = 1 where student_id = '110246' and subject_id = 5;
+
+delimiter //
+create definer = current_user trigger students_update before update on students
+for each row
+begin
+	insert into audit value
+    (now(), 'Update_row', concat(old.student_id, ', ', old.firstname, ', ', old.surname, ', ', old.lastname, ', ', old.group_num, ', ', old.phone_num), concat(new.student_id, ', ', new.firstname, ', ', new.surname, ', ', new.lastname, ', ', new.group_num, ', ', new.phone_num));
+end //
+delimiter ;
+update students set phone_num = '999999' where student_id = '110246';
+
+delimiter //
+create definer = current_user trigger subjects_update before update on subjects
+for each row
+begin
+	insert into audit value
+    (now(), 'Update_row', concat(old.subject_id, ', ', old.subject_name, ', ', old.teacher_name, ', ', old.teacher_firstname, ', ', old.teacher_midlename), concat(new.subject_id, ', ', new.subject_name, ', ', new.teacher_name, ', ', new.teacher_firstname, ', ', new.teacher_midlename));
+end //
+delimiter ;
+update subjects set teacher_firstname = "Лидочка" where subject_id = 5;
+
 
 SHOW TRIGGERS;
