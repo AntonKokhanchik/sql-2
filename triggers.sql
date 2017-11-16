@@ -115,7 +115,35 @@ delimiter ;
 update students set student_id = '000555' where student_id = '000005';
 
 # 7. Используя два триггера Before Update и After Update осуществите каскадное обновление для таблицы Студент.
-update students set student_id = '000555' where student_id = '000005';
+drop table tmp_exam;
+create table tmp_exam (
+	student_id VARCHAR(6),
+    subject_id TINYINT UNSIGNED,
+    mark VARCHAR(4) NOT NULL
+)CHARACTER SET = UTF8;
+
+drop trigger stud_before_update;
+delimiter //
+create definer = current_user trigger stud_before_update_check before update on students
+for each row
+begin
+    insert into tmp_exam select * from exam where exam.student_id = old.student_id;
+    delete from exam where exam.student_id = old.student_id;
+    update tmp_exam set tmp_exam.student_id = new.student_id where tmp_exam.student_id = old.student_id;
+end //
+delimiter ;
+
+drop trigger stud_after_update;
+delimiter //
+create definer = current_user trigger stud_after_update after update on students
+for each row
+begin
+    insert into exam select * from tmp_exam where tmp_exam.student_id = new.student_id;
+    delete from tmp_exam where tmp_exam.student_id = new.student_id;
+end //
+delimiter ;
+
+update students set student_id = '555555' where student_id = '000005';
 
 # 8. Создайте таблицу Стипендия. Создайте триггер Before Insert для таблицы Стипендия, который при начислении студенту социальной стипендии проверяет, 
 #	 должен ли студент получать академическую стипендию, и если должен, то назначает стипендию, равную сумме академической и социальной стипендии.
@@ -175,11 +203,101 @@ drop trigger subjects_update;
 create table audit (
 	date_operation datetime,
     name_operation varchar(20),
+    tablename varchar(20),
+    attribute varchar (20),
     old_data text,
     new_data text
 )CHARACTER SET = UTF8;   
 
 delimiter //
+create definer = current_user trigger stipend_update after update on stipends
+for each row
+begin
+	if old.student_id != new.student_id then
+		insert into audit value	(now(), 'Update_row', 'stipends', 'student_id', old.student_id, new.student_id);
+	end if;
+	if old.lastname != new.lastname then
+		insert into audit value	(now(), 'Update_row', 'stipends', 'lastname', old.lastname, new.lastname);
+	end if;
+	if old.group_num != new.group_num then
+		insert into audit value	(now(), 'Update_row', 'stipends', 'group_num', old.group_num, new.group_num);
+	end if;
+	if old.stipend != new.stipend then
+		insert into audit value	(now(), 'Update_row', 'stipends', 'stipend', old.stipend, new.stipend);
+	end if;
+end //
+delimiter ;
+update stipends set stipend = 8500 where student_id = '110246';
+
+delimiter //
+create definer = current_user trigger exam_update after update on exam
+for each row
+begin
+	if old.student_id != new.student_id then
+		insert into audit value	(now(), 'Update_row', 'exam', 'student_id', old.student_id, new.student_id);
+	end if;
+	if old.subject_id != new.subject_id then
+		insert into audit value	(now(), 'Update_row', 'exam', 'subject_id', old.subject_id, new.subject_id);
+	end if;
+	if old.mark != new.mark then
+		insert into audit value	(now(), 'Update_row', 'exam', 'mark', old.mark, new.mark);
+	end if;
+end //
+delimiter ;
+update exam set mark = 1 where student_id = '110246' and subject_id = 5;
+
+delimiter //
+create definer = current_user trigger students_update after update on students
+for each row
+begin
+	if old.student_id != new.student_id then
+		insert into audit value	(now(), 'Update_row', 'students', 'student_id', old.student_id, new.student_id);
+	end if;
+	if old.lastname != new.lastname then
+		insert into audit value	(now(), 'Update_row', 'students', 'lastname', old.lastname, new.lastname);
+	end if;
+	if old.group_num != new.group_num then
+		insert into audit value	(now(), 'Update_row', 'students', 'group_num', old.group_num, new.group_num);
+	end if;
+	if old.firstname != new.firstname then
+		insert into audit value	(now(), 'Update_row', 'stipends', 'firstname', old.firstname, new.firstname);
+	end if;
+    if old.surname != new.surname then
+		insert into audit value	(now(), 'Update_row', 'stipends', 'surname', old.surname, new.surname);
+	end if;
+    if old.phone_num != new.phone_num then
+		insert into audit value	(now(), 'Update_row', 'stipends', 'phone_num', old.phone_num, new.phone_num);
+	end if;
+end //
+delimiter ;
+update students set phone_num = '666666' where student_id = '110246';
+
+delimiter //
+create definer = current_user trigger subjects_update after update on subjects
+for each row
+begin
+	if old.subject_id != new.subject_id then
+		insert into audit value	(now(), 'Update_row', 'subjects', 'subject_id', old.subject_id, new.subject_id);
+	end if;
+	if old.subject_name != new.subject_name then
+		insert into audit value	(now(), 'Update_row', 'subjects', 'subject_name', old.subject_name, new.subject_name);
+	end if;
+	if old.teacher_name != new.teacher_name then
+		insert into audit value	(now(), 'Update_row', 'subjects', 'teacher_name', old.teacher_name, new.teacher_name);
+	end if;
+	if old.teacher_firstname != new.teacher_firstname then
+		insert into audit value	(now(), 'Update_row', 'subjects', 'teacher_firstname', old.teacher_firstname, new.teacher_firstname);
+	end if;
+    if old.teacher_midlename != new.teacher_midlename then
+		insert into audit value	(now(), 'Update_row', 'subjects', 'teacher_midlename', old.teacher_midlename, new.teacher_midlename);
+	end if;
+end //
+delimiter ;
+update subjects set teacher_firstname = "Лидия", teacher_midlename = "Петровна" where subject_id = 5;
+
+
+
+/*delimiter //
 create definer = current_user trigger stipend_update before update on stipends
 for each row
 begin
@@ -218,6 +336,6 @@ begin
 end //
 delimiter ;
 update subjects set teacher_firstname = "Лидочка" where subject_id = 5;
-
+*/
 
 SHOW TRIGGERS;
